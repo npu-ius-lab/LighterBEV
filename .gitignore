@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Editor/local settings
+.vscode/
+.idea/
+
+# Build and compiled artifacts
+build/
+dist/
+*.egg-info/
+*.so
+
+# Runtime outputs and caches
+cache/
+out_imgs/
+runs/
+runs_online/
+
+# Large model/data artifacts
+*.ckpt
+*.pth
+*.pt
+*.bin
+*.npy
+*.npz
+*.pkl
+*.zip
+*.tar
+*.tar.gz
