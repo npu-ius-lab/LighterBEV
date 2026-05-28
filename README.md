@@ -79,9 +79,13 @@ python datasets/gen_bev_images.py \
   --bev_save_path /path/to/KITTI/00/bev_imgs
 ```
 
-The source code for combining this method with a SLAM system can be found at:
+## SLAM Integration
+
+The source code for combining LighterBEV with a SLAM system can be found at:
 
 - <https://github.com/lbhwyy/Fastlio_Lighterbev>
+
+![LighterBEV SLAM Demo](docs/Fastlio_Lighterbev_demo.gif)
 
 ## Offline Training and Evaluation
 
