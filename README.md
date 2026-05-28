@@ -4,6 +4,8 @@
 
 LighterBEV is a lightweight LiDAR global localization and loop-closure module built on BEV (Bird's-Eye View) image representations. It targets real-time deployment and online adaptation, allowing the model to update during operation and improve place recognition performance in new environments.
 
+![LighterBEV Framework](docs/LighterBEV.png)
+
 ## Features
 
 - Lightweight BEV-based place recognition with retrieval followed by RANSAC-based pose estimation.
@@ -77,30 +79,6 @@ python datasets/gen_bev_images.py \
   --bev_save_path /path/to/KITTI/00/bev_imgs
 ```
 
-Dataset structure expected by the loaders:
-
-```text
-data/
-  KITTI/
-    00/
-      bev_imgs/
-    02/
-      bev_imgs/
-    poses/
-      00.txt
-      02.txt
-      ...
-  NCLT/
-    2012-01-15/
-      bev_imgs/
-    2012-02-04/
-      bev_imgs/
-    poses/
-      2012-01-15.txt
-      2012-02-04.txt
-      ...
-```
-
 The source code for combining this method with a SLAM system can be found at:
 
 - <https://github.com/lbhwyy/Fastlio_Lighterbev>
@@ -159,12 +137,6 @@ python main_pca_nclt_OL.py \
   --nclt_root ./data/NCLT \
   --kitti_root ./data/KITTI
 ```
-
-## Notes
-
-- `.vscode/`, caches, run outputs, and model checkpoints are ignored by Git.
-- Dataset roots are no longer hardcoded to machine-local absolute paths.
-- If you plan to redistribute trained weights or derived datasets, review their respective licenses separately.
 
 ## Citation
 
