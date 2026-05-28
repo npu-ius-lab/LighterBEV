@@ -1,0 +1,14 @@
+faiss-cpu
+h5py
+imgaug
+matplotlib
+numpy
+opencv-python
+open3d
+pympler
+pybind11
+scikit-learn
+tensorboardX
+torch
+torchvision
+tqdm

@@ -7,8 +7,8 @@ import os
 import argparse
 from tqdm import trange
 parser = argparse.ArgumentParser(description='BEVPlace-Gen-BEV-Images')
-parser.add_argument('--vel_path', type=str, default="/mnt/share_disk/KITTI/dataset/sequences/00/velodyne/", help='path to data')
-parser.add_argument('--bev_save_path', type=str, default="./KITTI_new_imgs/00/imgs/", help='path to data')
+parser.add_argument('--vel_path', type=str, required=True, help='Path to KITTI velodyne frames')
+parser.add_argument('--bev_save_path', type=str, required=True, help='Directory to save generated BEV images')
 
 def getBEV(all_points): #N*3
     

@@ -14,6 +14,14 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "RANSACCPP"))
 import rigid_ransac
 import matplotlib.pyplot as plt
 
+DEFAULT_NCLT_ROOT = os.environ.get("LIGHTERBEV_NCLT_PATH", "./data/NCLT")
+
+
+def _resolve_dataset_root(dataset_path, env_default):
+    root = dataset_path if dataset_path is not None else env_default
+    return root.rstrip("/\\") + "/"
+
+
 def random_sector_mask(image, angle_range=30):
 
     height, width = image.shape[:2]
@@ -60,8 +68,9 @@ def collate_fn(batch):
 
 
 class TrainingDatasetOCL(data.Dataset):
-    def __init__(self, dataset_path = '/media/ros/SSData/lbh/BEVPlace_oxford/data/NCLT/',seq='2013-02-23',random_mask=True):
+    def __init__(self, dataset_path=None, seq='2013-02-23', random_mask=True):
         super().__init__()
+        dataset_path = _resolve_dataset_root(dataset_path, DEFAULT_NCLT_ROOT)
         # bev path
         imgs_p = os.listdir(dataset_path+seq+'/bev_imgs/')
         imgs_p.sort()
@@ -98,8 +107,9 @@ class TrainingDatasetOCL(data.Dataset):
 
 
 class TrainingDataset(data.Dataset):
-    def __init__(self, dataset_path = '/media/ros/SSData/lbh/BEVPlace_oxford/data/NCLT/',seq='2013-02-23'):
+    def __init__(self, dataset_path=None, seq='2013-02-23'):
         super().__init__()
+        dataset_path = _resolve_dataset_root(dataset_path, DEFAULT_NCLT_ROOT)
         # bev path
         imgs_p = os.listdir(dataset_path+seq+'/bev_imgs/')
         imgs_p.sort()
@@ -202,8 +212,9 @@ def load_img(path, random_mask=False, rot=False):
 
 
 class InferDataset(data.Dataset):
-    def __init__(self, seq, dataset_path = '/media/ros/SSData/lbh/BEVPlace_oxford/data/NCLT/',sample_inteval=1):
+    def __init__(self, seq, dataset_path=None, sample_inteval=1):
         super().__init__()
+        dataset_path = _resolve_dataset_root(dataset_path, DEFAULT_NCLT_ROOT)
         self.sample_inteval = sample_inteval
 
         # bev path
@@ -577,4 +588,3 @@ def evaluateGLobalLocResults(global_des, dataset,local_feats = None, match_resul
 
 
    
-

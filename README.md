@@ -2,72 +2,40 @@
 
 **LiDAR Global Localization Meets Online Learning**
 
-LighterBEV is a lightweight LiDAR global localization and loop-closure module built on **BEV (Bird’s-Eye View) image representations**. It is designed for **real-time deployment** and **post-deployment online adaptation**, enabling a robot to **update model parameters during operation** and **improve place recognition performance in new environments**. 
+LighterBEV is a lightweight LiDAR global localization and loop-closure module built on BEV (Bird's-Eye View) image representations. It targets real-time deployment and online adaptation, allowing the model to update during operation and improve place recognition performance in new environments.
 
----
+## Features
 
-## News and Highlights
+- Lightweight BEV-based place recognition with retrieval followed by RANSAC-based pose estimation.
+- PCA-initialized Informative Compression Module (ICM) for compact local descriptors.
+- Online learning pipeline with fixed-size replay buffer and descriptor refreshing.
+- Evaluation pipelines for KITTI and NCLT.
+- Designed to integrate into SLAM loop-closure and relocalization workflows.
 
-- **Lightweight BEV-based place recognition + pose estimation**: global descriptor retrieval followed by **RANSAC-based** relative pose estimation.
-- **PCA-initialized Informative Compression Module (ICM)**: compresses local features via a trainable linear projection **initialized by PCA**, preserving discriminative structure and rotation equivariance.
-- **Online learning for LiDAR global localization**: maintains a fixed-size buffer with **reservoir adding**, **informative sampling**, and **feature refreshing** for efficient continual adaptation under streaming constraints.
-- **Designed to integrate with SLAM**: online updates occur during the SLAM process, supporting loop closure/relocalization pipelines.
+## Repository Layout
 
----
+- `main_pca_kitti.py`: offline training and evaluation entrypoint.
+- `main_pca_nclt_OL.py`: online adaptation entrypoint for NCLT.
+- `kitti_dataset.py`: KITTI dataset loading and evaluation utilities.
+- `nclt_dataset.py`: NCLT dataset loading and evaluation utilities.
+- `datasets/gen_bev_images.py`: helper for generating BEV images from raw point clouds.
+- `RANSACCPP/`: pybind11 RANSAC extension source.
 
-## Method Overview
+## Installation
 
-### BEV Global Localization Pipeline
+### 1. Python environment
 
-Given a LiDAR scan, we generate a BEV image and extract:
+Python 3.8+ is recommended.
 
-1. **Global descriptor** for retrieval (place recognition).
-2. **Compact local descriptors** for geometric verification and pose estimation.
+Install dependencies with:
 
-The system follows a two-stage localization routine:
-**(i) place recognition** → **(ii) pose estimation with RANSAC**. 
+```bash
+pip install -r requirements.txt
+```
 
-### LighterREM Encoder (REM + ICM)
+### 2. Build the RANSAC extension
 
-LighterBEV adopts a rotation-equivariant feature encoder and introduces an **Informative Compression Module (ICM)** for efficient dimensionality reduction. 
-
-**ICM core idea (PCA initialization, trainable refinement):**
-A set of local features is sampled, PCA is applied to obtain a projection matrix and mean vector, then the projection is made trainable and optimized end-to-end:
-
-- Trainable parameters are initialized by PCA,
-- Updated by backpropagation during training.
-
-### Online Learning Mechanism
-
-The online learning pipeline maintains an **online buffer** and repeats:
-
-- Compute descriptor for new frame
-- Add to buffer (reservoir)
-- Sample informative triplets (hard negatives)
-- Update network
-- Refresh buffer descriptors periodically 
-
----
-
-## Dependencies
-
-- Python **3.8+**
-- PyTorch (CUDA version should match your system)
-- faiss, numpy, opencv-python, imgaug, tqdm, tensorboardX, h5py, scikit-learn, matplotlib, pympler
-- (Optional) ROS/SLAM stack for integration
-
-## Quickstart
-
-This section walks you through a minimal end-to-end workflow:
-**(1) prepare BEV images → (2) compile RANSAC → (3) offline train/eval → (4) online adaptation**.
-
-### Step 1. Prepare Datasets
-
-### Step 2. Build rigid_ransac
-
-pybind11 is needed
-
-On Ubuntu 20.04, compile the RANSAC extension with:
+`pybind11` is required.
 
 ```bash
 cd RANSACCPP
@@ -76,59 +44,133 @@ c++ -O3 -Wall -shared -std=c++17 -fPIC \
   rigid_ransac.cpp \
   -I/usr/include/eigen3 \
   -o rigid_ransac$(python3-config --extension-suffix)
+cd ..
 ```
 
-If Eigen is installed in a different location, replace -I/usr/include/eigen3 with your actual include path.
+If Eigen is installed elsewhere, replace `-I/usr/include/eigen3` with the correct include path.
 
-### Step 3. Offline Training and evaluation (KITTI → NCLT Evaluation)
+## Dataset Preparation
 
-python main_pca_kitti.py
---mode train
---batchSize 4
---cacheBatchSize 64
---runsPath ./runs/
---cachePath ./cache/
+The code expects pre-generated BEV images and pose files arranged under dataset roots.
 
-Offline Evaluation
-python main_pca_kitti.py
---mode test
---load_from runs/xx_xx-xx-xx
---ckpt best
+Default roots:
 
---load_from: directory for pre-trained checkpoints
+- `./data/KITTI`
+- `./data/NCLT`
 
-### Step 4. Online Training and evaluation
+You can override them either with command-line arguments or environment variables:
 
-Online Learning (Post-deployment Adaptation)
-Online Training
+```bash
+export LIGHTERBEV_KITTI_PATH=/path/to/KITTI
+export LIGHTERBEV_NCLT_PATH=/path/to/NCLT
+```
 
-python main_pca_nclt_OL.py
---mode train
---load_from runs_online/xx_xx-xx-xx
---nRuns 5
-Notes:
+For raw KITTI point clouds, BEV images can be generated with:
 
---load_from: a pretrained checkpoint folder (i.e. trained on KITTI).
+```bash
+python datasets/gen_bev_images.py \
+  --vel_path /path/to/KITTI/sequences/00/velodyne \
+  --bev_save_path /path/to/KITTI/00/bev_imgs
+```
 
---nRuns: run multiple times and average results to reduce randomness.
+Dataset structure expected by the loaders:
 
-Testing (Evaluate a Specific Run)
-python main_pca_nclt_OL.py
---mode test
---load_from runs_online/xx_xx-xx-xx
---runsNum 0
+```text
+data/
+  KITTI/
+    00/
+      bev_imgs/
+    02/
+      bev_imgs/
+    poses/
+      00.txt
+      02.txt
+      ...
+  NCLT/
+    2012-01-15/
+      bev_imgs/
+    2012-02-04/
+      bev_imgs/
+    poses/
+      2012-01-15.txt
+      2012-02-04.txt
+      ...
+```
 
-Citation
+## Offline Training and Evaluation
 
-If you use this repository in academic work, please cite the corresponding LighterBEV paper (add BibTeX here).
+Train on KITTI:
 
-@article{lighterbev2025,
-title   = {LighterBEV: LiDAR Global Localization Meets Online Learning},
-author  = {Liu, Binhong and Yang, Tao and Cao, Haoji and Fu, Shuqi and Fang, Yangwang and Yan, Zhi},
-journal = {IEEE Robotics and Automation Letters},
-year    = {2025}
+```bash
+python main_pca_kitti.py \
+  --mode train \
+  --batchSize 4 \
+  --cacheBatchSize 64 \
+  --runsPath ./runs \
+  --cachePath ./cache \
+  --kitti_root ./data/KITTI \
+  --nclt_root ./data/NCLT
+```
+
+Test a pretrained checkpoint:
+
+```bash
+python main_pca_kitti.py \
+  --mode test \
+  --load_from runs/<run_name> \
+  --ckpt best \
+  --kitti_root ./data/KITTI \
+  --nclt_root ./data/NCLT
+```
+
+Useful output arguments:
+
+- `--globalDescPath`: directory for exported descriptors.
+- `--matchResultsPath`: directory for qualitative match visualizations.
+
+## Online Learning on NCLT
+
+Run online adaptation:
+
+```bash
+python main_pca_nclt_OL.py \
+  --mode train \
+  --load_from runs/<offline_checkpoint_dir> \
+  --nRuns 5 \
+  --nclt_root ./data/NCLT \
+  --kitti_root ./data/KITTI
+```
+
+Evaluate a specific online-learning run:
+
+```bash
+python main_pca_nclt_OL.py \
+  --mode test \
+  --load_from runs_online/<run_name> \
+  --runsNum 0 \
+  --nclt_root ./data/NCLT \
+  --kitti_root ./data/KITTI
+```
+
+## Notes
+
+- `.vscode/`, caches, run outputs, and model checkpoints are ignored by Git.
+- Dataset roots are no longer hardcoded to machine-local absolute paths.
+- If you plan to redistribute trained weights or derived datasets, review their respective licenses separately.
+
+## Citation
+
+If you use this repository in academic work, please cite the corresponding LighterBEV paper.
+
+```bibtex
+@ARTICLE{11282439,
+  author={Liu, Binhong and Yang, Tao and Cao, Haoji and Fu, Shuqi and Fang, Yangwang and Yan, Zhi},
+  journal={IEEE Robotics and Automation Letters},
+  title={LighterBEV: LiDAR Global Localization Meets Online Learning},
+  year={2026},
+  volume={11},
+  number={2},
+  pages={1170-1177},
+  doi={10.1109/LRA.2025.3641146}
 }
-
-```
-
 ```

@@ -14,6 +14,13 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), "RANSACCPP"))
 import rigid_ransac
 
+DEFAULT_KITTI_ROOT = os.environ.get("LIGHTERBEV_KITTI_PATH", "./data/KITTI")
+
+
+def _resolve_dataset_root(dataset_path, env_default):
+    root = dataset_path if dataset_path is not None else env_default
+    return root.rstrip("/\\") + "/"
+
 
 kitti_seq_split_points = {"00":3000, "02":3400, "05":1000, "06":600, '08':1000}
 
@@ -86,8 +93,9 @@ def load_img(path, random_mask=False, rot=False):
 
 
 class InferDataset(data.Dataset):
-    def __init__(self, seq, dataset_path = '/media/ros/SSData/lbh/BEVPlace_oxford/data/KITTI/',sample_inteval=1,rot=False):
+    def __init__(self, seq, dataset_path=None, sample_inteval=1, rot=False):
         super().__init__()
+        dataset_path = _resolve_dataset_root(dataset_path, DEFAULT_KITTI_ROOT)
         self.sample_inteval = sample_inteval
         self.db_split_index = int(kitti_seq_split_points[seq]/sample_inteval)
         # bev path
@@ -341,8 +349,9 @@ def collate_fn(batch):
 
 
 class TrainingDataset(data.Dataset):
-    def __init__(self, dataset_path = '/media/ros/SSData/lbh/BEVPlace_oxford/data/KITTI/',seq='00'):
+    def __init__(self, dataset_path=None, seq='00'):
         super().__init__()
+        dataset_path = _resolve_dataset_root(dataset_path, DEFAULT_KITTI_ROOT)
         # bev path
         imgs_p = os.listdir(dataset_path+seq+'/bev_imgs/')
         imgs_p.sort()

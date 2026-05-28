@@ -46,6 +46,10 @@ def get_args():
     parser.add_argument('--load_from', type=str, default='', help='Path to load checkpoint from, for resuming training or testing.')
     parser.add_argument('--ckpt', type=str, default='best', 
             help='Load_from from latest or best checkpoint.', choices=['latest', 'best'])
+    parser.add_argument('--kitti_root', type=str, default='./data/KITTI', help='Root directory of the KITTI BEV dataset.')
+    parser.add_argument('--nclt_root', type=str, default='./data/NCLT', help='Root directory of the NCLT BEV dataset.')
+    parser.add_argument('--globalDescPath', type=str, default='./global_descriptors_ol', help='Directory to save exported global descriptors.')
+    parser.add_argument('--matchResultsPath', type=str, default='./out_imgs', help='Directory to save visualization outputs.')
 
     opt = parser.parse_args()
     return opt
@@ -322,13 +326,13 @@ if __name__ == "__main__":
         
         print('===> Loading dataset(s)')
 
-        train_set = nclt_dataset.TrainingDatasetOCL() 
+        train_set = nclt_dataset.TrainingDatasetOCL(dataset_path=opt.nclt_root) 
 
         val_set={}
 
         # for seq in ['00', '02', '05', '06']:   
         for seq in ['2012-02-04', '2012-03-17', '2012-06-15', '2012-09-28','2012-11-16']:
-            val_set[seq] = nclt_dataset.InferDataset(seq=seq)
+            val_set[seq] = nclt_dataset.InferDataset(seq=seq, dataset_path=opt.nclt_root)
 
         # initilize model weights
         optimizer = optim.Adam(filter(lambda p: p.requires_grad, 
@@ -362,7 +366,7 @@ if __name__ == "__main__":
             else:
                 initcache = join(opt.cachePath, 'desc_cen.hdf5')
                 if not isfile(initcache):
-                    train_set = nclt_dataset.TrainingDataset()
+                    train_set = nclt_dataset.TrainingDataset(dataset_path=opt.nclt_root)
                     print('===> Calculating descriptors and clusters')
                     if use_pca:
                         getClustersPCA(train_set,dim=local_dim,nv_pca=pca_dim)
@@ -395,7 +399,7 @@ if __name__ == "__main__":
             eval_datasets = []
             eval_global_descs = []
             for seq in eval_seq:   
-                test_set = nclt_dataset.InferDataset(seq=seq)   
+                test_set = nclt_dataset.InferDataset(seq=seq, dataset_path=opt.nclt_root)   
                 global_descs = infer(test_set)
                 eval_global_descs.append(global_descs)
                 eval_datasets.append(test_set)
@@ -420,7 +424,7 @@ if __name__ == "__main__":
         writer.close()
     
     elif opt.mode.lower() == 'test':
-        global_save_path = 'global_descripors_ol'
+        global_save_path = opt.globalDescPath
         if not os.path.exists(global_save_path):
             os.makedirs(global_save_path)
         results_total = np.zeros(shape=(7,6,5))
@@ -466,14 +470,14 @@ if __name__ == "__main__":
                         for seq in ['00', '02', '05', '06','08']:
                             if rot_kitti:
                                 print('evaluate place recognition only on rot kitti')
-                                test_set = kitti_dataset.InferDataset(seq=seq,sample_inteval=1,rot=True)   
+                                test_set = kitti_dataset.InferDataset(seq=seq, dataset_path=opt.kitti_root, sample_inteval=1, rot=True)   
                                 global_descs = infer(test_set)
                                 recall_top1 = kitti_dataset.evaluateResults(seq, global_descs, None, test_set)
                                 print('===> Recall @ top 1 on Rot KITTI %s: %0.2f'%(seq, recall_top1*100))
                                 del global_descs
                             else:
                                 print('evaluate place recognition only on kitti')
-                                test_set = kitti_dataset.InferDataset(seq=seq,sample_inteval=1,rot=False)   
+                                test_set = kitti_dataset.InferDataset(seq=seq, dataset_path=opt.kitti_root, sample_inteval=1, rot=False)   
                                 global_descs = infer(test_set)
                                 recall_top1 = kitti_dataset.evaluateResults(seq, global_descs, None, test_set)
                                 print('===> Recall @ top 1 on KITTI %s: %0.2f'%(seq, recall_top1*100))
@@ -483,23 +487,23 @@ if __name__ == "__main__":
                             if rot_kitti:
                                 # if seq in ['00','08']:
                                 print('evaluate global localization on rot-kitti')
-                                test_set = kitti_dataset.InferDataset(seq=seq,sample_inteval=1,rot=rot_kitti)  #return a very large local feature mat could be very slow. sample the dataset to reduce ram and time cost
+                                test_set = kitti_dataset.InferDataset(seq=seq, dataset_path=opt.kitti_root, sample_inteval=1, rot=rot_kitti)  #return a very large local feature mat could be very slow. sample the dataset to reduce ram and time cost
                                 local_feats, global_descs, angles= infer(test_set, return_local_feats=True, return_angles=True)  
-                                test_set = kitti_dataset.InferDataset(seq=seq,sample_inteval=1,rot=False)
-                                recall_top1, success_rate, mean_trans_err, mean_rot_err = kitti_dataset.evaluateResults(seq, global_descs, local_feats, test_set,rot_angles=angles, match_results_save_path="out_imgs/")
+                                test_set = kitti_dataset.InferDataset(seq=seq, dataset_path=opt.kitti_root, sample_inteval=1, rot=False)
+                                recall_top1, success_rate, mean_trans_err, mean_rot_err = kitti_dataset.evaluateResults(seq, global_descs, local_feats, test_set,rot_angles=angles, match_results_save_path=opt.matchResultsPath)
                                 print("seq:",seq,"success_rate:",success_rate*100,"recall_top1:",recall_top1*100,"mean_trans_err:",mean_trans_err,"mean_rot_err:",mean_rot_err)
                                 del local_feats,global_descs
                             else:
                                 print('evaluate global localization on kitti')
-                                test_set = kitti_dataset.InferDataset(seq=seq,sample_inteval=1,rot=False)  #return a very large local feature mat could be very slow. sample the dataset to reduce ram and time cost
+                                test_set = kitti_dataset.InferDataset(seq=seq, dataset_path=opt.kitti_root, sample_inteval=1, rot=False)  #return a very large local feature mat could be very slow. sample the dataset to reduce ram and time cost
                                 local_feats, global_descs = infer(test_set, return_local_feats=True)  
-                                recall_top1, success_rate, mean_trans_err, mean_rot_err = kitti_dataset.evaluateResults(seq, global_descs, local_feats, test_set, rot_angles=None,match_results_save_path = "out_imgs/")
+                                recall_top1, success_rate, mean_trans_err, mean_rot_err = kitti_dataset.evaluateResults(seq, global_descs, local_feats, test_set, rot_angles=None,match_results_save_path=opt.matchResultsPath)
                                 print("seq:",seq,"success_rate:",success_rate*100,"recall_top1:",recall_top1*100,"mean_trans_err:",mean_trans_err,"mean_rot_err:",mean_rot_err)
                                 del local_feats,global_descs
                     elif eval_mode == 'loop_closure':
                         for seq in ['00', '02', '05', '06','08']:
                             print('evaluate loop closure')
-                            test_set = kitti_dataset.InferDataset(seq=seq,sample_inteval=1)   
+                            test_set = kitti_dataset.InferDataset(seq=seq, dataset_path=opt.kitti_root, sample_inteval=1)   
                             global_descs = infer(test_set)
                             average_precision, f1_max, max_recall = kitti_dataset.evaluateLoopClosureResults(global_descs,test_set)
                             
@@ -516,7 +520,7 @@ if __name__ == "__main__":
                     if eval_mode == 'loop_closure':
                         print('evaluate LoopClosureResults on NCLT')
                         for i,seq in enumerate(eval_seq):   
-                            test_set = nclt_dataset.InferDataset(seq=seq)   
+                            test_set = nclt_dataset.InferDataset(seq=seq, dataset_path=opt.nclt_root)   
                             # local_feats,global_descs = infer(test_set,return_local_feats=True)
                             global_descs = infer(test_set,return_local_feats=False)
                             path = os.path.join(global_save_path,'BEVPlace++_nclt_'+seq + '.npy')
@@ -547,7 +551,7 @@ if __name__ == "__main__":
                         import math
                         for i,seq in enumerate(eval_seq):
                             if seq == '2012-01-15':
-                                database_set = nclt_dataset.InferDataset(seq=seq)
+                                database_set = nclt_dataset.InferDataset(seq=seq, dataset_path=opt.nclt_root)
                                 database_local_feats, database_global_descs = infer(database_set,return_local_feats=True)
                                 database_poses = database_set.poses
                                 recall_top1_list.append(0)
@@ -555,7 +559,7 @@ if __name__ == "__main__":
                                 mean_trans_err_list.append(0)
                                 mean_rot_err_list.append(0)
                             else:
-                                test_set = nclt_dataset.InferDataset(seq=seq)
+                                test_set = nclt_dataset.InferDataset(seq=seq, dataset_path=opt.nclt_root)
                                 dataset_size = len(test_set)
                                 split_size = math.ceil(dataset_size / splits)
 
