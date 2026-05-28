@@ -27,6 +27,9 @@ cache/
 out_imgs/
 runs/
 runs_online/
+!runs/
+!runs/pretrained_weights/
+!runs/pretrained_weights/**
 
 # Large model/data artifacts
 *.ckpt
