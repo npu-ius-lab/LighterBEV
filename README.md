@@ -53,6 +53,10 @@ If Eigen is installed elsewhere, replace `-I/usr/include/eigen3` with the correc
 
 The code expects pre-generated BEV images and pose files arranged under dataset roots.
 
+Our dataset packaging follows BEVPlace2. Download the dataset from Google Drive, unzip it, and move the files into the `data` directory:
+
+- <https://github.com/zjuluolun/BEVPlace2>
+
 Default roots:
 
 - `./data/KITTI`
@@ -96,6 +100,10 @@ data/
       2012-02-04.txt
       ...
 ```
+
+The source code for combining this method with a SLAM system can be found at:
+
+- <https://github.com/lbhwyy/Fastlio_Lighterbev>
 
 ## Offline Training and Evaluation
 
